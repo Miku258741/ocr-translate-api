@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>瞬訳スキャナー - 画像翻訳アプリ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background-color: #e0e7ff;
+      background-image:
+        radial-gradient(circle at 15% 50%, #a5b4fc 0%, rgba(165, 180, 252, 0) 35%),
+        radial-gradient(circle at 85% 30%, #c4b5fd 0%, rgba(196, 181, 253, 0) 35%),
+        radial-gradient(circle at 50% 80%, #d8b4fe 0%, rgba(216, 180, 254, 0) 40%);
+      background-attachment: fixed;
+    }
+    .drop-zone {
+      border: 2px dashed #cbd5e1;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+    .drop-zone.drag-over {
+      background-color: #e2e8f0;
+      border-color: #6366f1;
+    }
+    .loader {
+      border-top-color: #6366f1;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="text-gray-800 flex items-center justify-center min-h-screen p-4">
+  <div class="w-full max-w-4xl bg-white/80 backdrop-blur rounded-xl shadow-lg p-6">
+    <header class="text-center mb-6">
+      <h1 class="text-3xl font-bold text-indigo-600">瞬訳スキャナー</h1>
+      <p class="text-gray-600 mt-2">画像をアップロードすると、AIが日本語に翻訳します。</p>
+    </header>
+
+    <main>
+      <!-- Upload area -->
+      <div id="upload-container">
+        <div id="drop-zone" class="drop-zone w-full rounded-lg p-6 text-center cursor-pointer bg-white hover:bg-gray-50">
+          <input type="file" id="file-input" class="hidden" accept="image/*" />
+          <p class="text-gray-700">画像をドラッグ＆ドロップ または クリックで選択</p>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="result-container" class="hidden mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h2 class="font-semibold mb-2">元の画像</h2>
+          <img id="image-preview" class="w-full max-h-80 object-contain border rounded" />
+        </div>
+        <div>
+          <h2 class="font-semibold mb-2">翻訳結果</h2>
+          <div id="loader-container" class="flex items-center justify-center h-40 bg-gray-100 rounded">
+            <div class="loader w-8 h-8 border-4 border-gray-300 rounded-full"></div>
+            <span class="ml-3 text-gray-600" id="status-text">解析中...</span>
+          </div>
+          <div id="translation-output" class="hidden p-3 bg-indigo-50 rounded">
+            <p class="whitespace-pre-wrap text-gray-800"></p>
+          </div>
+          <div id="error-output" class="hidden p-3 bg-red-100 rounded">
+            <p class="text-red-700 font-semibold">エラーが発生しました</p>
+            <p id="error-message" class="text-red-600 mt-1"></p>
+          </div>
+        </div>
+      </div>
+      <div class="text-center mt-6">
+        <button id="reset-button" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">別の画像を試す</button>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const uploadContainer = document.getElementById('upload-container');
+    const resultContainer = document.getElementById('result-container');
+    const imagePreview = document.getElementById('image-preview');
+    const loaderContainer = document.getElementById('loader-container');
+    const statusText = document.getElementById('status-text');
+    const translationOutput = document.getElementById('translation-output');
+    const errorOutput = document.getElementById('error-output');
+    const errorMessage = document.getElementById('error-message');
+    const resetButton = document.getElementById('reset-button');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) handleFile(files[0]);
+    });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) handleFile(e.target.files[0]);
+    });
+    resetButton.addEventListener('click', () => {
+      uploadContainer.classList.remove('hidden');
+      resultContainer.classList.add('hidden');
+      resetButton.classList.add('hidden');
+      imagePreview.src = '';
+      fileInput.value = '';
+      loaderContainer.classList.remove('hidden');
+      translationOutput.classList.add('hidden');
+      errorOutput.classList.add('hidden');
+      translationOutput.querySelector('p').textContent = '';
+      errorMessage.textContent = '';
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) return;
+      uploadContainer.classList.add('hidden');
+      resultContainer.classList.remove('hidden');
+      resetButton.classList.remove('hidden');
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        imagePreview.src = e.target.result;
+        const base64 = e.target.result.split(',')[1];
+        translateImage(base64);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function translateImage(base64) {
+      loaderContainer.classList.remove('hidden');
+      translationOutput.classList.add('hidden');
+      errorOutput.classList.add('hidden');
+      statusText.textContent = 'AIが画像を解析・翻訳中です...';
+
+      try {
+        const res = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64ImageData: base64 }),
+        });
+        if (!res.ok) throw new Error('APIエラー');
+        const data = await res.json();
+        loaderContainer.classList.add('hidden');
+        translationOutput.classList.remove('hidden');
+        translationOutput.querySelector('p').textContent = data.translated;
+      } catch (err) {
+        loaderContainer.classList.add('hidden');
+        errorOutput.classList.remove('hidden');
+        errorMessage.textContent = '翻訳に失敗しました';
+      }
+    }
+  </script>
+</body>
+</html>
