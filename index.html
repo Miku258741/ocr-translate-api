@@ -138,7 +138,7 @@
       statusText.textContent = 'AIが画像を解析・翻訳中です...';
 
       try {
-        const res = await fetch('/api/translate', {
+        const res = await fetch('https://ocr-translate-api.vercel.app/api/translate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ base64ImageData: base64 }),
