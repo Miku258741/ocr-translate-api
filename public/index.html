@@ -1,36 +1,48 @@
-<!doctype html><meta charset="utf-8"><title>Auth テスト</title>
-<p id="status">ログインしてください</p>
-<button id="btnLogin">Googleでログイン</button>
-<button id="btnLogout" hidden>ログアウト</button>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
-  from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+<script>
+  const API_URL = 'https://ocr-translate-api.vercel.app/api/translate';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDEeJTeI3fBPMbPnUwQIBwQL7mmqPw57bc",
-  authDomain: "gazouhonnyaku-auth.firebaseapp.com",
-  projectId: "gazouhonnyaku-auth",
-  storageBucket: "gazouhonnyaku-auth.firebasestorage.app",
-  messagingSenderId: "608329907159",
-  appId: "1:608329907159:web:b58521a43b5026b5376992"
-};
+  async function translateImage(base64) {
+    loaderContainer.classList.remove('hidden');
+    translationOutput.classList.add('hidden');
+    errorOutput.classList.add('hidden');
+    statusText.textContent = 'AIが画像を解析・翻訳中です...';
 
-initializeApp(firebaseConfig);
-const auth = getAuth();
-const provider = new GoogleAuthProvider();
+    try {
+      // ★ ここで最新トークンを取得
+      const token = await window.getFreshIdToken();
+      if (!token) throw new Error('AUTH_REQUIRED');
 
-/* ← ここが追加ポイント */
-const statusEl  = document.getElementById("status");
-const btnLogin  = document.getElementById("btnLogin");
-const btnLogout = document.getElementById("btnLogout");
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // ★ Authorization を必ず付ける
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ base64ImageData: base64 })
+      });
 
-btnLogin.onclick  = () => signInWithPopup(auth, provider);
-btnLogout.onclick = () => signOut(auth);
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          const msg = res.status === 401
+            ? '認証エラー：再ログインしてください。'
+            : 'このアカウントではご利用いただけません（未許可/期限切れの可能性）。';
+          throw new Error(msg);
+        }
+        throw new Error('APIエラー');
+      }
 
-onAuthStateChanged(auth, (u) => {
-  statusEl.textContent = u ? `ようこそ ${u.displayName || u.email}` : "ログインしてください";
-  btnLogin.hidden  = !!u;
-  btnLogout.hidden = !u;
-});
+      const data = await res.json();
+      loaderContainer.classList.add('hidden');
+      translationOutput.classList.remove('hidden');
+      translationOutput.querySelector('p').textContent = data.translated || '(翻訳テキストがありません)';
+    } catch (err) {
+      loaderContainer.classList.add('hidden');
+      errorOutput.classList.remove('hidden');
+      errorMessage.textContent =
+        err?.message === 'AUTH_REQUIRED'
+          ? 'ログイン状態を確認できません。いったんログアウトしてログインし直してください。'
+          : (err?.message || '翻訳に失敗しました');
+    }
+  }
 </script>
