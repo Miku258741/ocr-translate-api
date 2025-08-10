@@ -1,0 +1,36 @@
+<!doctype html><meta charset="utf-8"><title>Auth テスト</title>
+<p id="status">ログインしてください</p>
+<button id="btnLogin">Googleでログイン</button>
+<button id="btnLogout" hidden>ログアウト</button>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDEeJTeI3fBPMbPnUwQIBwQL7mmqPw57bc",
+  authDomain: "gazouhonnyaku-auth.firebaseapp.com",
+  projectId: "gazouhonnyaku-auth",
+  storageBucket: "gazouhonnyaku-auth.firebasestorage.app",
+  messagingSenderId: "608329907159",
+  appId: "1:608329907159:web:b58521a43b5026b5376992"
+};
+
+initializeApp(firebaseConfig);
+const auth = getAuth();
+const provider = new GoogleAuthProvider();
+
+/* ← ここが追加ポイント */
+const statusEl  = document.getElementById("status");
+const btnLogin  = document.getElementById("btnLogin");
+const btnLogout = document.getElementById("btnLogout");
+
+btnLogin.onclick  = () => signInWithPopup(auth, provider);
+btnLogout.onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, (u) => {
+  statusEl.textContent = u ? `ようこそ ${u.displayName || u.email}` : "ログインしてください";
+  btnLogin.hidden  = !!u;
+  btnLogout.hidden = !u;
+});
+</script>
