@@ -32,7 +32,7 @@ export default async function handler(req, res) {
   try {
     // OCR API を叩く
     const ocrResponse = await fetch(
-      `https://vision.googleapis.com/v1/images:annotate?key=${process.env.GOOGLE_API_KEY}`,
+      https://vision.googleapis.com/v1/images:annotate?key=${process.env.GOOGLE_API_KEY},
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
 
     // 翻訳 API を叩く
     const translateResponse = await fetch(
-      `https://translation.googleapis.com/language/translate/v2?key=${process.env.GOOGLE_API_KEY}`,
+      https://translation.googleapis.com/language/translate/v2?key=${process.env.GOOGLE_API_KEY},
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
