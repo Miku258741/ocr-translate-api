@@ -3,7 +3,7 @@ export default async function handler(req, res) {
 // api/translate.js のCORS部分
 const allowedOrigins = new Set([
   'https://ocr-translate-api.vercel.app',
-  'https://ocr-translate-<あなたのプロジェクト>.vercel.app', // もし別URLでも公開しているなら
+  'https://ocr-translate-4yco87elc-mikus-projects-3bcdde09.vercel.app', // もし別URLでも公開しているなら
   'https://gazouhonnyaku-auth.web.app',
   'https://auth-clean.web.app',
   'http://localhost:5000', // ローカル検証用（不要なら外す）
