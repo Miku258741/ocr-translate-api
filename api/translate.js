@@ -5,7 +5,8 @@ const allowedOrigins = new Set([
   'https://ocr-translate-api.vercel.app',
   'https://ocr-translate-4yco87elc-mikus-projects-3bcdde09.vercel.app', // もし別URLでも公開しているなら
   'https://gazouhonnyaku-auth.web.app',
-  'https://auth-clean.web.app',
+  'https://auth-clean.web.app',          // ← 追加
+  'https://auth-clean.firebaseapp.com',  // ← 追加
   'http://localhost:5000', // ローカル検証用（不要なら外す）
 ]);
 const origin = req.headers.origin || '';
